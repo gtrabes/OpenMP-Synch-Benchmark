@@ -1,0 +1,1 @@
+# OpenMP-Synch-Benchmark
