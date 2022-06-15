@@ -15,12 +15,14 @@ using namespace std;
 int main(int argc, char *argv[]) {
 
 	std::cout << std::fixed << std::setprecision(9) << std::left;
-	double time=0.0;
-	chrono::high_resolution_clock::time_point start, end;
+	double time=0.0, max=0.0;
 
 	// get number of processors
 	size_t num_processors = omp_get_num_procs();
 	std::cout << "Number of processors: " << num_processors << std::endl;
+
+	chrono::high_resolution_clock::time_point start[num_processors], end[num_processors];
+	std::chrono::duration<double> diff[num_processors];
 
 	// parallel computation changing number of threads till 2*number of threads
 	for(size_t p = 2; p <= num_processors; p++){
@@ -38,19 +40,19 @@ int main(int argc, char *argv[]) {
 			}
 
 			for(size_t i=0; i<1000000; i++){
-				#pragma omp master
-				{
-					start = std::chrono::high_resolution_clock::now();
-				}
-
+				start[tid] = std::chrono::high_resolution_clock::now();
 				#pragma omp barrier
+				end[tid] = std::chrono::high_resolution_clock::now();
+				diff[tid] = end[tid] - start[tid];
 
-				#pragma omp master
+				#pragma omp critical
 				{
-					end = std::chrono::high_resolution_clock::now();
-					std::chrono::duration<double> diff = end - start;
-					time += std::chrono::duration<double>(diff).count();
+					if(std::chrono::duration<double>(diff[tid]).count() > max){
+						max = std::chrono::duration<double>(diff[tid]).count();
+					}
 				}
+				time+=max;
+				max=0.0;
 			}
 		}
 		//calculate average
